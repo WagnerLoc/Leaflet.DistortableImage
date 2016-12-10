@@ -51,8 +51,14 @@
         }
       ).addTo(map);
 
+
+	  img.on('click', console.log('click'));
+
+	  var draggable = new L.Draggable(img);
+	  draggable.enable();
+
       L.DomEvent.on(img._image, 'load', img.editing.enable, img.editing);
     })();
   </script>
-      
+
 </html>

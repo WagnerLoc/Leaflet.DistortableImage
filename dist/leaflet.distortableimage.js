@@ -314,7 +314,7 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 	initialize: function(url, options) {
 		this._url = url;
 		this._rotation = this.options.rotation;
-
+		console.log('test');
 		L.setOptions(this, options);
 	},
 
@@ -331,32 +331,35 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 		/* End copied from L.ImageOverlay */
 
 		/* Use provided corners if available */
-		if (this.options.corners) { 
-			this._corners = this.options.corners; 
+		if (this.options.corners) {
+			this._corners = this.options.corners;
 			if (map.options.zoomAnimation && L.Browser.any3d) {
 				map.on('zoomanim', this._animateZoom, this);
 			}
 
-			/* This reset happens before image load; it allows 
-			 * us to place the image on the map earlier with 
+			/* This reset happens before image load; it allows
+			 * us to place the image on the map earlier with
 			 * "guessed" dimensions. */
 			this._reset();
 		}
 
-		/* Have to wait for the image to load because 
+		/* Have to wait for the image to load because
 		 * we need to access its width and height. */
 		L.DomEvent.on(this._image, 'load', function() {
 			this._initImageDimensions();
 			this._reset();
 			/* Initialize default corners if not already set */
-			if (!this._corners) { 
+			if (!this._corners) {
 				if (map.options.zoomAnimation && L.Browser.any3d) {
 					map.on('zoomanim', this._animateZoom, this);
 				}
 			}
-		}, this);		
 
-		this.fire('add');	
+		}, this);
+
+		console.log('test2');
+
+		this.fire('add');
 	},
 
 	onRemove: function(map) {
@@ -399,11 +402,11 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 	},
 
  	_initEvents: function() {
- 		this._events = [ 'click' ];
+ 		//this._events = [ 'click' ];
 
- 		for (var i = 0, l = this._events.length; i < l; i++) {
-	 		L.DomEvent.on(this._image, this._events[i], this._fireMouseEvent, this);
- 		}
+ 		//for (var i = 0, l = this._events.length; i < l; i++) {
+	 	//	L.DomEvent.on(this._image, this._events[i], this._fireMouseEvent, this);
+ 		//}
  	},
 
  	/* See src/layer/vector/Path.SVG.js in the Leaflet source. */
@@ -428,6 +431,21 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 		this._reset();
 	},
 
+
+	/* Copied from Leaflet v0.7 https://github.com/Leaflet/Leaflet/blob/66282f14bcb180ec87d9818d9f3c9f75afd01b30/src/dom/DomUtil.js#L189-L199 */
+	/* since L.DomUtil.getTranslateString() is deprecated in Leaflet v1.0 */
+	_getTranslateString: function (point) {
+		// on WebKit browsers (Chrome/Safari/iOS Safari/Android) using translate3d instead of translate
+		// makes animation smoother as it ensures HW accel is used. Firefox 13 doesn't care
+		// (same speed either way), Opera 12 doesn't support translate3d
+
+		var is3d = L.Browser.webkit3d,
+		    open = 'translate' + (is3d ? '3d' : '') + '(',
+		    close = (is3d ? ',0' : '') + ')';
+
+		return open + point.x + 'px,' + point.y + 'px' + close;
+	},
+
 	_reset: function() {
 		var map = this._map,
 			image = this._image,
@@ -437,7 +455,7 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 			topLeft = latLngToLayerPoint(this._corners[0]),
 
 			warp = L.DomUtil.getMatrixString(transformMatrix),
-			translation = L.DomUtil.getTranslateString(topLeft);
+			translation = this._getTranslateString(topLeft);
 
 		/* See L.DomUtil.setPosition. Mainly for the purposes of L.Draggable. */
 		image._leaflet_pos = topLeft;
@@ -450,7 +468,7 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 
 	/*
 	 * Calculates the transform string that will be correct *at the end* of zooming.
-	 * Leaflet then generates a CSS3 animation between the current transform and 
+	 * Leaflet then generates a CSS3 animation between the current transform and
 	 *		 future transform which makes the transition appear smooth.
 	 */
 	_animateZoom: function(event) {
@@ -459,16 +477,16 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 			latLngToNewLayerPoint = function(latlng) {
 				return map._latLngToNewLayerPoint(latlng, event.zoom, event.center);
 			},
-	
+
 			transformMatrix = this._calculateProjectiveTransform(latLngToNewLayerPoint),
 			topLeft = latLngToNewLayerPoint(this._corners[0]),
-	
+
 			warp = L.DomUtil.getMatrixString(transformMatrix),
-			translation = L.DomUtil.getTranslateString(topLeft);
-	
+			translation = this._getTranslateString(topLeft);
+
 		/* See L.DomUtil.setPosition. Mainly for the purposes of L.Draggable. */
 		image._leaflet_pos = topLeft;
-	
+
 		if (!L.Browser.gecko) {
 			image.style[L.DomUtil.TRANSFORM] = [translation, warp].join(' ');
 		}
@@ -498,11 +516,11 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 	},
 
 	_calculateProjectiveTransform: function(latLngToCartesian) {
-		/* Setting reasonable but made-up image defaults 
-		 * allow us to place images on the map before 
+		/* Setting reasonable but made-up image defaults
+		 * allow us to place images on the map before
 		 * they've finished downloading. */
 		var offset = latLngToCartesian(this._corners[0]),
-			w = this._image.offsetWidth || 500, 
+			w = this._image.offsetWidth || 500,
 			h = this._image.offsetHeight || 375,
 			c = [],
 			j;
@@ -510,7 +528,7 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 		for (j = 0; j < this._corners.length; j++) {
 			c.push(latLngToCartesian(this._corners[j])._subtract(offset));
 		}
-		
+
 		/*
 		 * This matrix describes the action of the CSS transform on each corner of the image.
 		 * It maps from the coordinate system centered at the upper left corner of the image
@@ -527,7 +545,6 @@ L.DistortableImageOverlay = L.ImageOverlay.extend({
 		);
 	}
 });
-
 L.DistortableImage = L.DistortableImage || {};
 
 var EditOverlayAction = L.ToolbarAction.extend({
@@ -693,9 +710,9 @@ L.DistortableImage.Edit = L.Handler.extend({
 			this._rotateHandles.addLayer(new L.RotateHandle(overlay, i));
 		}
 
-		this._handles = { 
-			'lock':		 this._lockHandles, 
-			'distort': this._distortHandles, 
+		this._handles = {
+			'lock':		 this._lockHandles,
+			'distort': this._distortHandles,
 			'rotate':	this._rotateHandles
 		};
 
@@ -774,8 +791,8 @@ L.DistortableImage.Edit = L.Handler.extend({
 	},
 
 	_enableDragging: function() {
-		var overlay = this._overlay,
-			map = overlay._map;
+		var overlay = this._overlay;
+		//	map = overlay._map;
 
 		this.dragging = new L.Draggable(overlay._image);
 		this.dragging.enable();
@@ -783,11 +800,11 @@ L.DistortableImage.Edit = L.Handler.extend({
 		/* Hide toolbars while dragging; click will re-show it */
 		this.dragging.on('dragstart', this._hideToolbar, this);
 
-		/* 
+		/*
 		 * Adjust default behavior of L.Draggable.
-		 * By default, L.Draggable overwrites the CSS3 distort transform 
+		 * By default, L.Draggable overwrites the CSS3 distort transform
 		 * that we want when it calls L.DomUtil.setPosition.
-		 */
+
 		this.dragging._updatePosition = function() {
 			var delta = this._newPos.subtract(map.latLngToLayerPoint(overlay._corners[0])),
 				currentPoint, i;
@@ -802,7 +819,7 @@ L.DistortableImage.Edit = L.Handler.extend({
 			overlay.fire('update');
 
 			this.fire('drag');
-		};
+		};*/
 	},
 
 	_onKeyDown: function(event) {
@@ -812,7 +829,7 @@ L.DistortableImage.Edit = L.Handler.extend({
 		if (handlerName !== undefined) {
 			this[handlerName].call(this);
 		}
-	},	
+	},
 
 	_toggleRotateDistort: function() {
 		var map = this._overlay._map;
@@ -856,8 +873,8 @@ L.DistortableImage.Edit = L.Handler.extend({
 
 		map.removeLayer(this._handles[this._mode]);
 		/* Switch mode. */
-		if (this._mode === 'lock') { 
-			this._mode = 'distort'; 
+		if (this._mode === 'lock') {
+			this._mode = 'distort';
 			this._enableDragging();
 		} else {
 			this._mode = 'lock';
@@ -882,7 +899,7 @@ L.DistortableImage.Edit = L.Handler.extend({
 
 		/* Ensure that there is only ever one toolbar attached to each image. */
 		this._hideToolbar();
-		
+
 		var point;
 		if (event.containerPoint) { point = event.containerPoint; }
 		else { point = event.target._dragStartTarget._leaflet_pos; }
@@ -919,5 +936,5 @@ L.DistortableImageOverlay.addInitHook(function() {
 
 	this.on('remove', function () {
 		if (this.editing) { this.editing.disable(); }
-	});	
+	});
 });
